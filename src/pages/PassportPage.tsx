@@ -27,7 +27,7 @@ export default function PassportPage() {
   ];
 
   const milestones = [
-    { date: 'Jan 2024', event: 'Joined TrustBond', icon: BadgeCheck },
+    { date: 'Jan 2024', event: 'Joined TrueBond', icon: BadgeCheck },
     { date: 'Feb 2024', event: 'Phone Verified', icon: Shield },
     { date: 'Mar 2024', event: 'Face Verified', icon: Shield },
     { date: 'Jun 2024', event: 'ID Verified', icon: BadgeCheck },

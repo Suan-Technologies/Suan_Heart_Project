@@ -16,7 +16,7 @@ function getSystemTheme(): 'light' | 'dark' {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const stored = localStorage.getItem('trustbond-theme') as Theme;
+    const stored = localStorage.getItem('TrueBond-theme') as Theme;
     return stored || 'system';
   });
 
@@ -30,7 +30,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.classList.remove('light', 'dark');
     root.classList.add(resolved);
 
-    localStorage.setItem('trustbond-theme', theme);
+    localStorage.setItem('TrueBond-theme', theme);
   }, [theme]);
 
   useEffect(() => {

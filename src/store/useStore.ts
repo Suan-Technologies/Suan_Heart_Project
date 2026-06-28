@@ -124,7 +124,7 @@ export const useStore = create<AppState>()(
       decrementChats: () => set((s) => ({ dailyChatsRemaining: Math.max(0, s.dailyChatsRemaining - 1) })),
     }),
     {
-      name: 'trustbond-store',
+      name: 'TrueBond-store',
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
         currentUser: state.currentUser,

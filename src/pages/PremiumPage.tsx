@@ -35,7 +35,7 @@ export default function PremiumPage() {
             </div>
             <h1 className="text-3xl font-bold mb-2">Go Premium</h1>
             <p className="text-white/50 max-w-xs mx-auto">
-              Unlock the full TrustBond experience and find your match faster
+              Unlock the full TrueBond experience and find your match faster
             </p>
           </motion.div>
         </div>

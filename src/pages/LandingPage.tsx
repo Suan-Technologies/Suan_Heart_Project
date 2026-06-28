@@ -109,7 +109,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 rounded-full gradient-btn flex items-center justify-center">
               <Heart className="w-4 h-4 text-white fill-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight">TrustBond</span>
+            <span className="text-xl font-bold tracking-tight">TrueBond</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm text-white/60 hover:text-white transition-colors">Features</a>
@@ -236,7 +236,7 @@ export default function LandingPage() {
             className="text-center mb-16"
           >
             <motion.h2 variants={fadeInUp} custom={0} className="text-3xl md:text-5xl font-bold mb-4">
-              Why Choose <span className="gradient-text">TrustBond</span>
+              Why Choose <span className="gradient-text">TrueBond</span>
             </motion.h2>
             <motion.p variants={fadeInUp} custom={1} className="text-white/50 max-w-xl mx-auto">
               We have built a platform that prioritizes your safety, privacy, and genuine connections.
@@ -378,7 +378,7 @@ export default function LandingPage() {
               Choose Your <span className="gradient-text">Plan</span>
             </motion.h2>
             <motion.p variants={fadeInUp} custom={1} className="text-white/50 max-w-xl mx-auto">
-              Unlock the full potential of TrustBond with our premium plans.
+              Unlock the full potential of TrueBond with our premium plans.
             </motion.p>
           </motion.div>
 
@@ -454,7 +454,7 @@ export default function LandingPage() {
                 <span className="gradient-text">Perfect Match?</span>
               </h2>
               <p className="text-white/50 max-w-lg mx-auto mb-8">
-                Join millions of verified singles who trust TrustBond to find meaningful relationships.
+                Join millions of verified singles who trust TrueBond to find meaningful relationships.
               </p>
               <button
                 onClick={() => navigate('/auth')}
@@ -476,7 +476,7 @@ export default function LandingPage() {
               <div className="w-8 h-8 rounded-full gradient-btn flex items-center justify-center">
                 <Heart className="w-4 h-4 text-white fill-white" />
               </div>
-              <span className="text-lg font-bold">TrustBond</span>
+              <span className="text-lg font-bold">TrueBond</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-white/40">
               <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
@@ -485,7 +485,7 @@ export default function LandingPage() {
               <a href="#" className="hover:text-white transition-colors">Support</a>
             </div>
             <div className="text-sm text-white/30">
-              &copy; 2026 TrustBond. All rights reserved.
+              &copy; 2026 TrueBond. All rights reserved.
             </div>
           </div>
         </div>

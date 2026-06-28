@@ -55,7 +55,7 @@ function DiscoverView({ onLike, onPass, onSuperLike }: {
           <div className="w-8 h-8 rounded-full gradient-btn flex items-center justify-center">
             <Heart className="w-4 h-4 text-white fill-white" />
           </div>
-          <span className="font-bold text-lg">TrustBond</span>
+          <span className="font-bold text-lg">TrueBond</span>
         </div>
         <button className="glass rounded-full p-2.5 hover:bg-white/10 transition-all relative">
           <Bell className="w-5 h-5" />

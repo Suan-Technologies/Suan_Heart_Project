@@ -4,7 +4,7 @@
  * App-level settings jaise app name, version, feature flags, limits, etc.
  * ============================================================================= */
 
-export const APP_NAME = 'TrustBond';
+export const APP_NAME = 'TrueBond';
 export const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.0';
 export const APP_TAGLINE = 'Find Your Perfect Match';
 
@@ -86,12 +86,12 @@ export const TOAST_DURATION = {
 
 // ─── Social Share Links ────────────────────────────────────────────────────
 export const SOCIAL_LINKS = {
-  instagram: 'https://instagram.com/trustbond',
-  twitter:   'https://twitter.com/trustbond',
-  facebook:  'https://facebook.com/trustbond',
-  support:   'https://support.trustbond.app',
-  privacy:   'https://trustbond.app/privacy',
-  terms:     'https://trustbond.app/terms',
+  instagram: 'https://instagram.com/TrueBond',
+  twitter:   'https://twitter.com/TrueBond',
+  facebook:  'https://facebook.com/TrueBond',
+  support:   'https://support.TrueBond.app',
+  privacy:   'https://TrueBond.app/privacy',
+  terms:     'https://TrueBond.app/terms',
 } as const;
 
 // ─── Default Export ────────────────────────────────────────────────────────

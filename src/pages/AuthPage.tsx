@@ -101,7 +101,7 @@ export default function AuthPage() {
           <div className="w-10 h-10 rounded-full gradient-btn flex items-center justify-center">
             <Heart className="w-5 h-5 text-white fill-white" />
           </div>
-          <span className="text-2xl font-bold">TrustBond</span>
+          <span className="text-2xl font-bold">TrueBond</span>
         </div>
 
         <AnimatePresence mode="wait">

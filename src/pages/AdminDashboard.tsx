@@ -45,7 +45,7 @@ export default function AdminDashboard() {
           </button>
           <div>
             <h1 className="text-lg font-bold">Admin Dashboard</h1>
-            <p className="text-xs text-white/40">TrustBond Admin Panel</p>
+            <p className="text-xs text-white/40">TrueBond Admin Panel</p>
           </div>
         </div>
         <button className="glass rounded-full p-2.5 hover:bg-white/10 transition-all">
