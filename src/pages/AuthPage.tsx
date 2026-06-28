@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Heart, Phone, Mail, ArrowLeft, ChevronRight, Shield, BadgeCheck,
-  User, IndianRupee, Camera, Lock, Eye, EyeOff, Loader2
+  User, IndianRupee, Camera, Lock, Eye, EyeOff, Loader2, Calendar
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
@@ -31,6 +31,7 @@ export default function AuthPage() {
   const [address, setAddress] = useState('');
   const [income, setIncome] = useState('');
   const [phone, setPhone] = useState('');
+  const [age, setAge] = useState<number | ''>('');  // ✅ AGE STATE ADDED
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -71,6 +72,7 @@ export default function AuthPage() {
     setAddress('');
     setIncome('');
     setPhone('');
+    setAge('');  // ✅ RESET AGE
     setPhotoFile(null);
     setPhotoPreview(null);
   };
@@ -112,10 +114,12 @@ export default function AuthPage() {
     return Object.keys(e).length === 0;
   };
 
+  // ✅ VALIDATION UPDATED WITH AGE
   const validateDetails = () => {
     const e: Record<string, string> = {};
     if (!address.trim()) e.address = 'Address is required';
     if (phone.length !== 10) e.phone = 'Phone must be 10 digits';
+    if (!age || age < 18) e.age = 'Age must be at least 18';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -134,6 +138,7 @@ export default function AuthPage() {
     }
   };
 
+  // ✅ HANDLE SEND OTP UPDATED WITH AGE AND PHONE FIX
   const handleSendOtp = async () => {
     if (!validateDetails()) return;
     setLoading(true);
@@ -145,7 +150,8 @@ export default function AuthPage() {
         title: title.trim(),
         gender,
         address: address.trim(),
-        phone: `+91${phone}`,
+        phone: phone,              // ✅ Sirf 10 digits, +91 nahi
+        age: Number(age),          // ✅ AGE ADDED
         income: income.trim() || undefined,
       });
       toast.success(res.message || 'OTP sent to your email!');
@@ -456,7 +462,7 @@ export default function AuthPage() {
             </motion.div>
           )}
 
-          {/* Registration Details Step */}
+          {/* Registration Details Step - AGE ADDED HERE */}
           {mode === 'register' && step === 'details' && (
             <motion.div
               key="details"
@@ -490,6 +496,28 @@ export default function AuthPage() {
                       className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder:text-white/30 focus:outline-none focus:border-rose-400/50 focus:ring-1 focus:ring-rose-400/30 transition-all"
                     />
                   </div>
+                </div>
+
+                {/* ✅ AGE INPUT FIELD ADDED */}
+                <div>
+                  <label className="text-sm text-white/60 mb-1.5 block">Age *</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+                    <input
+                      type="number"
+                      value={age}
+                      onChange={(e) => { 
+                        const val = parseInt(e.target.value);
+                        setAge(val > 0 ? val : ''); 
+                        clearError('age'); 
+                      }}
+                      placeholder="25"
+                      min="18"
+                      max="100"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder:text-white/30 focus:outline-none focus:border-rose-400/50 focus:ring-1 focus:ring-rose-400/30 transition-all"
+                    />
+                  </div>
+                  {errors.age && <p className="text-rose-400 text-xs mt-1">{errors.age}</p>}
                 </div>
 
                 <div>
