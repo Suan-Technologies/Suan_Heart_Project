@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -6,9 +6,11 @@ import {
   MapPin, Briefcase, GraduationCap, BadgeCheck, Filter,
   Settings, Crown, Bell, Sparkles, ChevronRight
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useStore } from '@/store/useStore';
-import { mockProfiles, mockConversations, mockMatches, moments } from '@/data/mockData';
-import type { Profile } from '@/store/useStore';
+import { chatApi, matchApi, discoveryApi, extractData } from '@/services/api';
+import type { Profile, Conversation, Match } from '@/services/api';
+import { moments } from '@/data/mockData';
 
 type Tab = 'discover' | 'matches' | 'moments' | 'chat' | 'profile';
 
@@ -26,23 +28,80 @@ function DiscoverView({ onLike, onPass, onSuperLike }: {
   onPass: () => void;
   onSuperLike: (p: Profile) => void;
 }) {
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState<'left' | 'right' | 'up' | null>(null);
   const [showFilter, setShowFilter] = useState(false);
-  const profile = mockProfiles[currentIndex];
+  const [loading, setLoading] = useState(true);
 
-  const handleSwipe = (dir: 'left' | 'right' | 'up') => {
+  useEffect(() => {
+    loadProfiles();
+  }, []);
+
+  const loadProfiles = async () => {
+    try {
+      setLoading(true);
+      const res = await discoveryApi.getProfiles();
+      const data = extractData(res);
+      const profiles = Array.isArray(data) ? data : data.profiles || [];
+      setProfiles(profiles);
+      setCurrentIndex(0);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load profiles');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const profile = profiles[currentIndex];
+
+  const handleSwipe = async (dir: 'left' | 'right' | 'up') => {
+    if (!profile) return;
     setDirection(dir);
+
+    try {
+      if (dir === 'right') {
+        const res = await discoveryApi.likeProfile(profile.id);
+        const data = extractData(res) as any;
+        if (data.is_match) onLike(profile);
+      } else if (dir === 'up') {
+        const res = await discoveryApi.superLike(profile.id);
+        const data = extractData(res) as any;
+        if (data.is_match) onSuperLike(profile);
+      } else if (dir === 'left') {
+        await discoveryApi.passProfile(profile.id);
+        onPass();
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Action failed');
+    }
+
     setTimeout(() => {
-      if (dir === 'right') onLike(profile);
-      if (dir === 'up') onSuperLike(profile);
-      if (dir === 'left') onPass();
-      setCurrentIndex(prev => (prev + 1) % mockProfiles.length);
+      setCurrentIndex(prev => prev + 1);
       setDirection(null);
     }, 300);
   };
 
-  if (!profile) return null;
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center px-8">
+        <Heart className="w-16 h-16 text-white/10 mb-4" />
+        <h3 className="text-xl font-bold mb-2">No More Profiles</h3>
+        <p className="text-sm text-white/50 text-center mb-6">Check back later or adjust your filters</p>
+        <button onClick={loadProfiles} className="gradient-btn px-6 py-3 rounded-full text-sm font-medium">
+          Refresh
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -102,7 +161,7 @@ function DiscoverView({ onLike, onPass, onSuperLike }: {
           >
             {/* Image */}
             <img
-              src={profile.photos[0]}
+              src={profile.photos?.[0] || '/images/avatar1.jpg'}
               alt={profile.name}
               className="absolute inset-0 w-full h-full object-cover"
             />
@@ -131,10 +190,10 @@ function DiscoverView({ onLike, onPass, onSuperLike }: {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-2xl font-bold">{profile.name}, {profile.age}</h3>
-                    {profile.verificationLevel === 'id' && (
+                    {profile.verification_level === 'id' && (
                       <BadgeCheck className="w-5 h-5 text-blue-400" />
                     )}
-                    {profile.verificationLevel === 'face' && (
+                    {profile.verification_level === 'face' && (
                       <BadgeCheck className="w-5 h-5 text-emerald-400" />
                     )}
                   </div>
@@ -147,7 +206,7 @@ function DiscoverView({ onLike, onPass, onSuperLike }: {
                   </div>
                 </div>
                 <div className="glass px-3 py-1.5 rounded-full">
-                  <span className="text-xs font-medium">{profile.trustScore}%</span>
+                  <span className="text-xs font-medium">{profile.trust_score}%</span>
                 </div>
               </div>
 
@@ -162,12 +221,12 @@ function DiscoverView({ onLike, onPass, onSuperLike }: {
               <p className="text-sm text-white/70 mb-4 line-clamp-2">{profile.bio}</p>
 
               <div className="flex flex-wrap gap-2 mb-4">
-                {profile.interests.slice(0, 4).map(tag => (
+                {(profile.interests || []).slice(0, 4).map((tag: string) => (
                   <span key={tag} className="glass px-3 py-1 rounded-full text-xs">{tag}</span>
                 ))}
               </div>
 
-              {profile.isOnline && (
+              {profile.is_online && (
                 <div className="flex items-center gap-1.5">
                   <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
                   <span className="text-xs text-emerald-400">Online now</span>
@@ -206,12 +265,43 @@ function DiscoverView({ onLike, onPass, onSuperLike }: {
 /* ─── Matches View ─── */
 function MatchesView() {
   const navigate = useNavigate();
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadMatches();
+  }, []);
+
+  const loadMatches = async () => {
+    try {
+      setLoading(true);
+      const res = await matchApi.getMatches();
+      const data = extractData(res);
+      const matches = Array.isArray(data) ? data : data.matches || [];
+      setMatches(matches);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load matches');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const newMatches = matches.filter(m => m.is_new);
+  const allMatches = matches;
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
       <div className="px-4 pt-4 pb-2">
         <h1 className="text-2xl font-bold mb-1">Your Matches</h1>
-        <p className="text-sm text-white/50">{mockMatches.length} people liked you back</p>
+        <p className="text-sm text-white/50">{allMatches.length} people liked you back</p>
       </div>
 
       <div className="flex-1 overflow-y-auto hide-scrollbar px-4 pb-4">
@@ -219,23 +309,23 @@ function MatchesView() {
         <div className="mb-6">
           <h3 className="text-sm font-semibold text-white/50 mb-3">New Matches</h3>
           <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
-            {mockMatches.filter(m => m.isNew).map(match => (
+            {newMatches.map(match => (
               <button
                 key={match.id}
-                onClick={() => navigate(`/chat/${match.profile.id}`)}
+                onClick={() => match.profile && navigate(`/chat/${match.profile.id}`)}
                 className="flex-shrink-0 text-center"
               >
                 <div className="w-20 h-20 rounded-full p-0.5 gradient-btn mb-2">
                   <img
-                    src={match.profile.photos[0]}
-                    alt={match.profile.name}
+                    src={match.profile?.photos?.[0] || '/images/avatar1.jpg'}
+                    alt={match.profile?.name}
                     className="w-full h-full rounded-full object-cover border-2 border-[#050505]"
                   />
                 </div>
-                <span className="text-xs">{match.profile.name}</span>
+                <span className="text-xs">{match.profile?.name}</span>
               </button>
             ))}
-            {mockMatches.filter(m => m.isNew).length === 0 && (
+            {newMatches.length === 0 && (
               <div className="glass rounded-2xl p-6 text-center flex-1">
                 <Heart className="w-8 h-8 text-white/20 mx-auto mb-2" />
                 <p className="text-sm text-white/40">No new matches yet</p>
@@ -248,30 +338,30 @@ function MatchesView() {
         <div>
           <h3 className="text-sm font-semibold text-white/50 mb-3">All Matches</h3>
           <div className="space-y-3">
-            {mockMatches.map(match => (
+            {allMatches.map(match => (
               <button
                 key={match.id}
-                onClick={() => navigate(`/chat/${match.profile.id}`)}
+                onClick={() => match.profile && navigate(`/chat/${match.profile.id}`)}
                 className="w-full glass rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.08] transition-all text-left"
               >
                 <div className="relative">
                   <img
-                    src={match.profile.photos[0]}
-                    alt={match.profile.name}
+                    src={match.profile?.photos?.[0] || '/images/avatar1.jpg'}
+                    alt={match.profile?.name}
                     className="w-14 h-14 rounded-full object-cover"
                   />
-                  {match.profile.isOnline && (
+                  {match.profile?.is_online && (
                     <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#050505]" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-semibold">{match.profile.name}</h4>
-                    {match.profile.verificationLevel === 'id' && (
+                    <h4 className="font-semibold">{match.profile?.name}</h4>
+                    {match.profile?.verification_level === 'id' && (
                       <BadgeCheck className="w-4 h-4 text-blue-400 flex-shrink-0" />
                     )}
                   </div>
-                  <p className="text-sm text-white/50 truncate">{match.profile.profession}</p>
+                  <p className="text-sm text-white/50 truncate">{match.profile?.profession}</p>
                 </div>
                 <MessageCircle className="w-5 h-5 text-white/30" />
               </button>
@@ -354,8 +444,36 @@ function MomentsView() {
 /* ─── Chat View ─── */
 function ChatView() {
   const navigate = useNavigate();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const totalUnread = mockConversations.reduce((sum, c) => sum + c.unreadCount, 0);
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  const loadConversations = async () => {
+    try {
+      setLoading(true);
+      const res = await chatApi.getConversations();
+      const data = extractData(res);
+      const conversations = Array.isArray(data) ? data : data.conversations || [];
+      setConversations(conversations);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load messages');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -369,7 +487,14 @@ function ChatView() {
       </div>
 
       <div className="flex-1 overflow-y-auto hide-scrollbar px-4 pb-4 space-y-2">
-        {mockConversations.map(conv => (
+        {conversations.length === 0 && (
+          <div className="glass rounded-2xl p-8 text-center mt-8">
+            <MessageCircle className="w-12 h-12 text-white/20 mx-auto mb-3" />
+            <h3 className="font-semibold mb-1">No messages yet</h3>
+            <p className="text-sm text-white/40">Start matching to begin conversations</p>
+          </div>
+        )}
+        {conversations.map(conv => (
           <button
             key={conv.id}
             onClick={() => navigate(`/chat/${conv.profile.id}`)}
@@ -377,30 +502,30 @@ function ChatView() {
           >
             <div className="relative flex-shrink-0">
               <img
-                src={conv.profile.photos[0]}
-                alt={conv.profile.name}
+                src={conv.profile?.photos?.[0] || '/images/avatar1.jpg'}
+                alt={conv.profile?.name}
                 className="w-14 h-14 rounded-full object-cover"
               />
-              {conv.profile.isOnline && (
+              {conv.profile?.is_online && (
                 <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#050505]" />
               )}
-              {conv.unreadCount > 0 && (
+              {conv.unread_count > 0 && (
                 <div className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center text-[10px] font-bold">
-                  {conv.unreadCount}
+                  {conv.unread_count}
                 </div>
               )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-0.5">
-                <h4 className={`font-semibold truncate ${conv.unreadCount > 0 ? 'text-white' : 'text-white/80'}`}>
-                  {conv.profile.name}
+                <h4 className={`font-semibold truncate ${conv.unread_count > 0 ? 'text-white' : 'text-white/80'}`}>
+                  {conv.profile?.name}
                 </h4>
                 <span className="text-xs text-white/30 flex-shrink-0 ml-2">
-                  {conv.lastMessage && new Date(conv.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {conv.last_message && new Date(conv.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
-              <p className={`text-sm truncate ${conv.unreadCount > 0 ? 'text-white/70' : 'text-white/40'}`}>
-                {conv.lastMessage?.content}
+              <p className={`text-sm truncate ${conv.unread_count > 0 ? 'text-white/70' : 'text-white/40'}`}>
+                {conv.last_message?.content}
               </p>
             </div>
           </button>
@@ -447,11 +572,11 @@ function ProfileView() {
         {/* Trust Score */}
         <div className="mt-4 glass rounded-2xl p-4 inline-block">
           <div className="text-xs text-white/50 mb-1">Trust Score</div>
-          <div className="text-2xl font-bold gradient-text">{currentUser?.trustScore || 0}%</div>
+          <div className="text-2xl font-bold gradient-text">{currentUser?.trust_score || 0}%</div>
           <div className="w-32 h-2 bg-white/10 rounded-full mt-2 overflow-hidden">
             <div
               className="h-full gradient-btn rounded-full transition-all duration-1000"
-              style={{ width: `${currentUser?.trustScore || 0}%` }}
+              style={{ width: `${currentUser?.trust_score || 0}%` }}
             />
           </div>
         </div>
@@ -525,7 +650,7 @@ function MatchOverlay({ profile, onClose }: { profile: Profile; onClose: () => v
             transition={{ delay: 0.4 }}
           >
             <img
-              src={profile.photos[0]}
+              src={profile.photos?.[0] || '/images/avatar1.jpg'}
               alt={profile.name}
               className="w-24 h-24 rounded-full object-cover border-4 border-rose-400"
             />
@@ -558,9 +683,7 @@ export default function MainApp() {
   const [matchProfile, setMatchProfile] = useState<Profile | null>(null);
 
   const handleLike = (profile: Profile) => {
-    if (Math.random() > 0.5) {
-      setMatchProfile(profile);
-    }
+    setMatchProfile(profile);
   };
 
   const handleSuperLike = (profile: Profile) => {

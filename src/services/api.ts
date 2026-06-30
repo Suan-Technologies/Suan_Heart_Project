@@ -1,5 +1,33 @@
-import { API_BASE_URL, API_TIMEOUT, AUTH_ENDPOINTS, USER_ENDPOINTS } from '@/config/api.config';
-import type { Profile } from '@/store/useStore';
+import { API_BASE_URL, API_TIMEOUT, AUTH_ENDPOINTS, USER_ENDPOINTS, CHAT_ENDPOINTS, MATCH_ENDPOINTS, DISCOVERY_ENDPOINTS } from '@/config/api.config';
+
+// ─── Backend-Compatible Types ─────────────────────────────────────────────
+
+export interface Profile {
+  id: string;
+  name: string;
+  age: number;
+  gender?: string;
+  photos?: string[];
+  bio?: string;
+  location?: string;
+  distance?: string;
+  profession?: string;
+  education?: string;
+  religion?: string;
+  height?: string;
+  languages?: string[];
+  interests?: string[];
+  relationship_goal?: string;
+  verification_level?: string;
+  trust_score?: number;
+  is_online?: boolean;
+  last_active?: string;
+  title?: string;
+  income?: string;
+  address?: string;
+  email?: string;
+  phone?: string;
+}
 
 // ─── Helper: Refresh Token (avoid circular dependency) ───────────────────
 
@@ -77,6 +105,10 @@ export async function apiRequest<T>(
     throw new Error(data?.message || data?.error || `HTTP ${response.status}`);
   }
   return data as T;
+}
+
+export function extractData<T>(response: any): T {
+  return response.data ?? response;
 }
 
 // ─── Auth API ─────────────────────────────────────────────────────────────
@@ -174,6 +206,112 @@ export const authApi = {
   refreshToken: (refreshToken: string) => doRefreshToken(refreshToken),
 
   getMe: () => apiRequest<Profile>(`${API_BASE_URL}${USER_ENDPOINTS.me}`, { method: 'GET' }),
+};
+
+// ─── Chat API ─────────────────────────────────────────────────────────────
+
+export interface Conversation {
+  id: string;
+  match_id: string;
+  user1_id: string;
+  user2_id: string;
+  profile: Profile;
+  messages: Message[];
+  unread_count: number;
+  last_message?: Message;
+  updated_at: string;
+  created_at: string;
+}
+
+export interface Message {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  content: string;
+  type: 'text' | 'image' | 'voice';
+  is_read: boolean;
+  created_at: string;
+}
+
+export const chatApi = {
+  getConversations: () =>
+    apiRequest<{ data: Conversation[] }>(`${API_BASE_URL}${CHAT_ENDPOINTS.getConversations}`, { method: 'GET' }),
+
+  getMessages: (conversationId: string) =>
+    apiRequest<{ data: Message[] }>(
+      `${API_BASE_URL}${CHAT_ENDPOINTS.getMessages.replace(':conversationId', conversationId)}`,
+      { method: 'GET' }
+    ),
+
+  sendMessage: (conversationId: string, content: string, type = 'text') =>
+    apiRequest<{ data: Message }>(
+      `${API_BASE_URL}${CHAT_ENDPOINTS.sendMessage.replace(':conversationId', conversationId)}`,
+      { method: 'POST', body: JSON.stringify({ content, type }) }
+    ),
+
+  markAsRead: (conversationId: string) =>
+    apiRequest<{ data: any }>(
+      `${API_BASE_URL}${CHAT_ENDPOINTS.markAsRead.replace(':conversationId', conversationId)}`,
+      { method: 'POST' }
+    ),
+};
+
+// ─── Match API ────────────────────────────────────────────────────────────
+
+export interface Match {
+  id: string;
+  user1_id: string;
+  user2_id: string;
+  matched_at: string;
+  is_new: boolean;
+  profile?: Profile;
+}
+
+export const matchApi = {
+  getMatches: () =>
+    apiRequest<{ data: Match[] }>(`${API_BASE_URL}${MATCH_ENDPOINTS.getMatches}`, { method: 'GET' }),
+
+  unmatch: (matchId: string) =>
+    apiRequest<{ message: string }>(
+      `${API_BASE_URL}${MATCH_ENDPOINTS.unmatch.replace(':matchId', matchId)}`,
+      { method: 'DELETE' }
+    ),
+};
+
+// ─── Discovery API ────────────────────────────────────────────────────────
+
+export interface DiscoveryProfile extends Profile { }
+
+
+export const discoveryApi = {
+  getProfiles: (params?: { page?: number; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.append('page', String(params.page));
+    if (params?.limit) qs.append('limit', String(params.limit));
+    const query = qs.toString();
+    return apiRequest<{ data: DiscoveryProfile[] }>(
+      `${API_BASE_URL}${DISCOVERY_ENDPOINTS.getProfiles}${query ? '?' + query : ''}`,
+      { method: 'GET' }
+    );
+  },
+
+  likeProfile: (profileId: string) =>
+    apiRequest<{ data: any }>(
+      `${API_BASE_URL}${DISCOVERY_ENDPOINTS.likeProfile.replace(':profileId', profileId)}`,
+      { method: 'POST' }
+    ),
+
+  passProfile: (profileId: string) =>
+    apiRequest<{ data: any }>(
+      `${API_BASE_URL}${DISCOVERY_ENDPOINTS.passProfile.replace(':profileId', profileId)}`,
+      { method: 'POST' }
+    ),
+
+  superLike: (profileId: string) =>
+    apiRequest<{ data: any }>(
+      `${API_BASE_URL}${DISCOVERY_ENDPOINTS.superLike.replace(':profileId', profileId)}`,
+      { method: 'POST' }
+    ),
 };
 
 // ─── Token Helpers ─────────────────────────────────────────────────────────

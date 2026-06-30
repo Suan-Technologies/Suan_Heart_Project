@@ -214,7 +214,7 @@ export default function AuthPage() {
       toast.success('Welcome back!');
       navigate(user.bio ? '/app' : '/onboarding');
     } catch (err: any) {
-      if (err.message === 'EMAIL_NOT_VERIFIED') {
+  if (err.message?.includes('Email not verified')) {
         setLoginPhase('otp');
         toast.info('Please verify your email first');
       } else {

@@ -5,59 +5,96 @@ import {
   ArrowLeft, Phone, Video, MoreVertical, Send, Image,
   Mic, Smile, Shield, BadgeCheck
 } from 'lucide-react';
-import { mockConversations } from '@/data/mockData';
+import { toast } from 'sonner';
+import { chatApi, extractData } from '@/services/api';
+import type { Conversation, Message } from '@/services/api';
 
 export default function ChatRoomPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState(mockConversations.find(c => c.profile.id === id)?.messages || []);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [conversation, setConversation] = useState<Conversation | null>(null);
 
-  const conversation = mockConversations.find(c => c.profile.id === id);
   const profile = conversation?.profile;
+
+  useEffect(() => {
+    if (!id) return;
+    let interval: ReturnType<typeof setInterval>;
+
+    const loadConversation = async () => {
+      try {
+        const res = await chatApi.getConversations();
+        const conversations = extractData(res);
+        const conv = conversations.find((c: Conversation) => c.profile?.id === id || c.id === id);
+        if (!conv) {
+          toast.error('Conversation not found');
+          navigate(-1);
+          return;
+        }
+        setConversation(conv);
+
+        const msgRes = await chatApi.getMessages(conv.id);
+        const msgs = extractData(msgRes);
+        setMessages(msgs.reverse());
+
+        await chatApi.markAsRead(conv.id);
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to load chat');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadConversation();
+    interval = setInterval(loadConversation, 5000); // poll every 5s
+    return () => clearInterval(interval);
+  }, [id, navigate]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
-  useEffect(() => {
-    if (Math.random() > 0.7) {
-      const timer = setTimeout(() => {
-        setIsTyping(true);
-        setTimeout(() => {
-          setIsTyping(false);
-          setMessages(prev => [...prev, {
-            id: `reply-${Date.now()}`,
-            senderId: id || '',
-            content: 'That sounds really interesting! Tell me more about it.',
-            timestamp: new Date(),
-            type: 'text',
-            isRead: false,
-          }]);
-        }, 2000);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [id]);
-
-  const handleSend = () => {
-    if (!message.trim()) return;
-    setMessages(prev => [...prev, {
-      id: `msg-${Date.now()}`,
-      senderId: 'me',
-      content: message,
-      timestamp: new Date(),
-      type: 'text',
-      isRead: false,
-    }]);
+  const handleSend = async () => {
+    if (!message.trim() || !conversation) return;
+    const content = message.trim();
     setMessage('');
+
+    const tempMsg: Message = {
+      id: `temp-${Date.now()}`,
+      conversation_id: conversation.id,
+      sender_id: 'me',
+      content,
+      type: 'text',
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, tempMsg]);
+
+    try {
+      const res = await chatApi.sendMessage(conversation.id, content, 'text');
+      const sent = extractData(res);
+      setMessages(prev => prev.map(m => m.id === tempMsg.id ? sent : m));
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send message');
+      setMessages(prev => prev.filter(m => m.id !== tempMsg.id));
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="h-screen bg-[#050505] text-white flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center">
+      <div className="h-screen bg-[#050505] text-white flex items-center justify-center">
         <p>Conversation not found</p>
       </div>
     );
@@ -76,7 +113,7 @@ export default function ChatRoomPage() {
 
         <div className="relative">
           <img
-            src={profile.photos[0]}
+            src={profile.photos?.[0] || '/images/avatar1.jpg'}
             alt={profile.name}
             className="w-10 h-10 rounded-full object-cover"
           />
@@ -124,9 +161,9 @@ export default function ChatRoomPage() {
 
         <AnimatePresence>
           {messages.map((msg, i) => {
-            const isMe = msg.senderId === 'me';
+            const isMe = msg.sender_id === 'me';
             const showTime = i === 0 ||
-              new Date(messages[i - 1].timestamp).getMinutes() !== new Date(msg.timestamp).getMinutes();
+              new Date(messages[i - 1].created_at).getMinutes() !== new Date(msg.created_at).getMinutes();
 
             return (
               <motion.div
@@ -148,8 +185,8 @@ export default function ChatRoomPage() {
                   </div>
                   {showTime && (
                     <p className={`text-[10px] text-white/30 mt-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      {isMe && <span className="ml-1">{msg.isRead ? 'Read' : 'Sent'}</span>}
+                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {isMe && <span className="ml-1">{msg.is_read ? 'Read' : 'Sent'}</span>}
                     </p>
                   )}
                 </div>
